@@ -15,6 +15,7 @@ using System.Windows.Shapes;
 using System.IO.MemoryMappedFiles;
 using System.Text.RegularExpressions;
 using System.Windows.Threading;
+using System.Net;
 
 namespace GW2MumbleLinkTesting
 {
@@ -32,34 +33,17 @@ namespace GW2MumbleLinkTesting
             
             try
             {
+                //MemoryMappedFile.CreateOrOpen("MumbleLink", 10580);
                 MemoryMappedFile.CreateNew("MumbleLink", 10580);
-                
-                /*using (var mmf = MemoryMappedFile.OpenExisting("MumbleLink"))
-                {
-                    using (var accessor = mmf.CreateViewAccessor())
-                    {
-                        uint[] value = new uint[256];
-
-                        //name (program name, Guild Wars 2) is at location 44
-                        //identity (character name) is at 592
-                        //context (uint) at 1108
-                        accessor.ReadArray<uint>(1108, value, 0, 10);
-
-                        foreach (uint c in value)
-                        {
-                            MessageBox.Show(c.ToString());
-                        }
-                    }
-                }*/
             }
             catch (Exception)
             {
-                MessageBox.Show("Trouble creating the Mumble Link MMF");
+                MessageBox.Show("Fatal: Trouble creating the Mumble Link MMF", "Fatal Error", MessageBoxButton.OK, MessageBoxImage.Error);
 
-                Application.Current.Shutdown();
+                //Application.Current.Shutdown();
             }
 
-            System.Windows.Threading.DispatcherTimer refreshTimer = new System.Windows.Threading.DispatcherTimer();
+            DispatcherTimer refreshTimer = new DispatcherTimer();
             refreshTimer.Tick += refreshTimer_Tick;
             refreshTimer.Interval = new TimeSpan(TimeSpan.TicksPerSecond / 30);
             refreshTimer.Start();
@@ -101,10 +85,37 @@ namespace GW2MumbleLinkTesting
             }
             catch (Exception)
             {
-                DataWindow.Background = Brushes.Red;
+                overlayGrid.Visibility = System.Windows.Visibility.Visible;
                 MessageBox.Show("Trouble accessing Mumble Link MMF");
                 ((System.Windows.Threading.DispatcherTimer)sender).Stop();
             }
+        }
+
+        private void tbWorldID_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            var w = new WebClient();
+            var response = w.DownloadString(@"https://api.guildwars2.com/v1/world_names.json");
+
+            var j = Newtonsoft.Json.JsonConvert.DeserializeObject<List<GW2APILibrary.World>>(response);
+
+            var world = from i in j
+                        where i.ID == int.Parse(tbWorldID.Text)
+                        select i;
+
+            if (world.Count() > 0)
+                tbServerName.Text = world.First<GW2APILibrary.World>().Name;
+        }
+
+        private void tbMapID_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            string mapID = tbMapID.Text;
+            var w = new WebClient();
+            var response = w.DownloadString(@"https://api.guildwars2.com/v1/maps.json?map_id=" + mapID);
+
+            dynamic map = Newtonsoft.Json.Linq.JObject.Parse(response);
+
+            tbMapName.Text = map["maps"][mapID]["map_name"];
+
         }
     }
 }

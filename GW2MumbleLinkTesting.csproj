@@ -65,6 +65,7 @@
   <ItemGroup>
     <Reference Include="Newtonsoft.Json">
       <HintPath>..\packages\Newtonsoft.Json.5.0.6\lib\net40\Newtonsoft.Json.dll</HintPath>
+      <EmbedInteropTypes>False</EmbedInteropTypes>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
@@ -153,6 +154,7 @@
     <ProjectReference Include="..\..\GW2APILibrary\GW2APILibrary\GW2APILibrary.csproj">
       <Project>{62e78bdb-62df-468e-8378-a54066aefa87}</Project>
       <Name>GW2APILibrary</Name>
+      <EmbedInteropTypes>False</EmbedInteropTypes>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

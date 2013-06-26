@@ -25,6 +25,8 @@ namespace GW2MumbleLinkTesting
     public partial class MainWindow : Window
     {
         MumbleLink data = new MumbleLink();
+        DispatcherTimer RefreshTimer = new DispatcherTimer();
+        DispatcherTimer CheckTimer = new DispatcherTimer();
         
         public MainWindow()
         {
@@ -33,8 +35,8 @@ namespace GW2MumbleLinkTesting
             
             try
             {
-                //MemoryMappedFile.CreateOrOpen("MumbleLink", 10580);
-                MemoryMappedFile.CreateNew("MumbleLink", 10580);
+                MemoryMappedFile.CreateOrOpen("MumbleLink", 10580, MemoryMappedFileAccess.ReadWrite);
+                //MemoryMappedFile.CreateNew("MumbleLink", 10580);
             }
             catch (Exception)
             {
@@ -43,10 +45,37 @@ namespace GW2MumbleLinkTesting
                 //Application.Current.Shutdown();
             }
 
-            DispatcherTimer refreshTimer = new DispatcherTimer();
-            refreshTimer.Tick += refreshTimer_Tick;
-            refreshTimer.Interval = new TimeSpan(TimeSpan.TicksPerSecond / 30);
-            refreshTimer.Start();
+            RefreshTimer.Tick += refreshTimer_Tick;
+            RefreshTimer.Interval = new TimeSpan(TimeSpan.TicksPerSecond / 30);
+            //System.Threading.Thread.Sleep(5000);
+
+            CheckTimer.Tick += CheckTimer_Tick;
+            CheckTimer.Interval = new TimeSpan(0, 0, 1);
+            CheckTimer.Start();
+            //RefreshTimer.Start();
+        }
+
+        void CheckTimer_Tick(object sender, EventArgs e)
+        {
+            using (var mmf = MemoryMappedFile.OpenExisting("MumbleLink"))
+            {
+                using (var accessor = mmf.CreateViewAccessor())
+                {
+                    char[] ident = new char[256];
+                    accessor.ReadArray<char>(592, ident, 0, 256);
+                    string charName = new string(ident);
+                    charName = charName.Remove(charName.IndexOf('\0'));
+
+                    if (charName.Length > 2)
+                    {
+                        CheckTimer.Stop();
+                        initOverlayGrid.Visibility = System.Windows.Visibility.Hidden;
+                        RefreshTimer.Start();
+                    }
+                    else
+                        lblAttempts.Content = int.Parse(lblAttempts.Content.ToString()) + 1;
+                }
+            }
         }
 
         void refreshTimer_Tick(object sender, EventArgs e)
@@ -72,22 +101,24 @@ namespace GW2MumbleLinkTesting
                         char[] ident = new char[256];
                         accessor.ReadArray<char>(592, ident, 0, 256);
                         string charName = new string(ident);
-                        Regex rgx = new Regex("[^a-zA-Z0-9 -]");
-                        charName = rgx.Replace(charName, "");
-                        tbCharName.Text = charName;
+                        //Regex rgx = new Regex("[^a-zA-Z0-9 -]");
+                        //charName = rgx.Replace(charName, "");
+                        tbCharName.Text = charName.Remove(charName.IndexOf('\0'));
 
                         uint[] context = new uint[10];
                         accessor.ReadArray<uint>(1108, context, 0, 10);
-                        tbMapID.Text = context[7].ToString();
-                        tbWorldID.Text = context[9].ToString();
+                        if (context[7] != 0)
+                            tbMapID.Text = context[7].ToString();
+                        if (context[9] != 0)
+                            tbWorldID.Text = context[9].ToString();
                     }
                 }
             }
             catch (Exception)
             {
-                overlayGrid.Visibility = System.Windows.Visibility.Visible;
-                MessageBox.Show("Trouble accessing Mumble Link MMF");
-                ((System.Windows.Threading.DispatcherTimer)sender).Stop();
+                errorOverlayGrid.Visibility = System.Windows.Visibility.Visible;
+                //MessageBox.Show("Trouble accessing Mumble Link MMF");
+                RefreshTimer.Stop();
             }
         }
 
@@ -116,6 +147,12 @@ namespace GW2MumbleLinkTesting
 
             tbMapName.Text = map["maps"][mapID]["map_name"];
 
+        }
+
+        private void btnRetry_Click(object sender, RoutedEventArgs e)
+        {
+            errorOverlayGrid.Visibility = System.Windows.Visibility.Hidden;
+            RefreshTimer.Start();
         }
     }
 }

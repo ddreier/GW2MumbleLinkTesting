@@ -26,23 +26,20 @@ namespace GW2MumbleLinkTesting
             try
             {
                 MemoryMappedFile.CreateOrOpen("MumbleLink", 10580, MemoryMappedFileAccess.ReadWrite);
-                //MemoryMappedFile.CreateNew("MumbleLink", 10580);
             }
             catch (Exception)
             {
                 MessageBox.Show("Fatal: Trouble creating the Mumble Link MMF", "Fatal Error", MessageBoxButton.OK, MessageBoxImage.Error);
 
-                //Application.Current.Shutdown();
+                Application.Current.Shutdown();
             }
 
             RefreshTimer.Tick += refreshTimer_Tick;
             RefreshTimer.Interval = new TimeSpan(TimeSpan.TicksPerSecond / 30);
-            //System.Threading.Thread.Sleep(5000);
 
             CheckTimer.Tick += CheckTimer_Tick;
             CheckTimer.Interval = new TimeSpan(0, 0, 1);
             CheckTimer.Start();
-            //RefreshTimer.Start();
         }
 
         void CheckTimer_Tick(object sender, EventArgs e)
